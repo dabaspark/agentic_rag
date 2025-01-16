@@ -79,9 +79,10 @@ def display_message_part(part):
             st.markdown(part.content)          
 
 
-async def run_agent_with_streaming(user_input: str):
+async def run_agent_and_display(user_input: str):
     """
-    Run the agent and display the response (non-streaming version for DeepSeek compatibility)
+    Run the agent and display the complete response at once (non-streaming).
+    Handles the entire conversation flow including message history management.
     """
     # Prepare dependencies
     deps = PydanticAIDeps(
@@ -145,10 +146,10 @@ async def main():
         with st.chat_message("user"):
             st.markdown(user_input)
 
-        # Display the assistant's partial response while streaming
+        # Display the assistant's response
         with st.chat_message("assistant"):
-            # Actually run the agent now, streaming the text
-            await run_agent_with_streaming(user_input)
+            # Run the agent and display the response
+            await run_agent_and_display(user_input)
 
 
 if __name__ == "__main__":
