@@ -23,8 +23,9 @@ from pydantic_ai.messages import (
     RetryPromptPart,
     ModelMessagesTypeAdapter
 )
-from domain_ai_expert import pydantic_ai_expert, PydanticAIDeps
+from domain_ai_expert import documentation_expert, PydanticAIDeps
 from shared_resources import embedding_model
+from config import CrawlerConfig
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -80,18 +81,16 @@ def display_message_part(part):
 
 
 async def run_agent_and_display(user_input: str):
-    """
-    Run the agent and display the complete response at once (non-streaming).
-    Handles the entire conversation flow including message history management.
-    """
+    """Run the agent and display the complete response at once."""
+    config = CrawlerConfig()
     # Prepare dependencies
     deps = PydanticAIDeps(
         supabase=supabase,
-        deepseek_client=deepseek_client
+        deepseek_client=deepseek_client,
+        source_name=config.source_name
     )
-
     # Run the agent without streaming
-    result = await pydantic_ai_expert.run(
+    result = await documentation_expert.run(
         user_input,
         deps=deps,
         message_history=st.session_state.messages[:-1]
@@ -118,8 +117,9 @@ async def run_agent_and_display(user_input: str):
 
 
 async def main():
-    st.title("Pydantic AI Agentic RAG")
-    st.write("Ask any question about Pydantic AI, the hidden truths of the beauty of this framework lie within.")
+    config = CrawlerConfig()
+    st.title(config.ui_title)
+    st.write(config.ui_description)
 
     # Initialize chat history in session state if not present
     if "messages" not in st.session_state:
@@ -134,7 +134,7 @@ async def main():
                 display_message_part(part)
 
     # Chat input for the user
-    user_input = st.chat_input("What questions do you have about Pydantic AI?")
+    user_input = st.chat_input("What questions do you have about the Documentation?")
 
     if user_input:
         # We append a new request to the conversation explicitly
