@@ -17,6 +17,7 @@ from supabase import create_client, Client
 from sentence_transformers import SentenceTransformer
 import sys
 from shared_resources import embedding_model
+from config import CrawlerConfig
 
 load_dotenv()
 
@@ -43,7 +44,7 @@ class ProcessedChunk:
     metadata: Dict[str, Any]
     embedding: List[float]
 
-def chunk_text(text: str, chunk_size: int = 5000) -> List[str]:
+def chunk_text(text: str, chunk_size: int = CrawlerConfig.chunk_size) -> List[str]:
     """Split text into chunks, respecting code blocks and paragraphs."""
     chunks = []
     start = 0
@@ -90,6 +91,9 @@ def chunk_text(text: str, chunk_size: int = 5000) -> List[str]:
 
 async def get_title_and_summary(chunk: str, url: str) -> Dict[str, str]:
     """Extract title and summary using DeepSeek."""
+    if not CrawlerConfig.generate_summaries:
+        return {"title": "Untitled", "summary": "No summary generated"}
+        
     system_prompt = """You are an AI that extracts titles and summaries from documentation chunks.
     Return a JSON object with 'title' and 'summary' keys.
     For the title: If this seems like the start of a document, extract its title. If it's a middle chunk, derive a descriptive title.
@@ -119,7 +123,7 @@ async def get_embedding(text: str) -> List[float]:
         print(f"Error getting embedding: {e}")
         return [0] * 1024  # stella_en_400M_v5 dimension is 1024
 
-async def process_chunk(chunk: str, chunk_number: int, url: str) -> ProcessedChunk:
+async def process_chunk(chunk: str, chunk_number: int, url: str, source_name: str) -> ProcessedChunk:
     """Process a single chunk of text."""
     # Get title and summary
     extracted = await get_title_and_summary(chunk, url)
@@ -129,7 +133,7 @@ async def process_chunk(chunk: str, chunk_number: int, url: str) -> ProcessedChu
     
     # Create metadata
     metadata = {
-        "source": "pydantic_ai_docs",
+        "source": source_name,
         "chunk_size": len(chunk),
         "crawled_at": datetime.now(timezone.utc).isoformat(),
         "url_path": urlparse(url).path
@@ -165,14 +169,14 @@ async def insert_chunk(chunk: ProcessedChunk):
         print(f"Error inserting chunk: {e}")
         return None
 
-async def process_and_store_document(url: str, markdown: str):
+async def process_and_store_document(url: str, markdown: str, source_name: str):
     """Process a document and store its chunks in parallel."""
     # Split into chunks
     chunks = chunk_text(markdown)
     
     # Process chunks in parallel
     tasks = [
-        process_chunk(chunk, i, url) 
+        process_chunk(chunk, i, url, source_name) 
         for i, chunk in enumerate(chunks)
     ]
     processed_chunks = await asyncio.gather(*tasks)
@@ -184,7 +188,7 @@ async def process_and_store_document(url: str, markdown: str):
     ]
     await asyncio.gather(*insert_tasks)
 
-async def crawl_parallel(urls: List[str], max_concurrent: int = 5):
+async def crawl_parallel(urls: List[str], config: CrawlerConfig):
     """Crawl multiple URLs in parallel with a concurrency limit."""
     browser_config = BrowserConfig(
         headless=True,
@@ -199,7 +203,7 @@ async def crawl_parallel(urls: List[str], max_concurrent: int = 5):
 
     try:
         # Create a semaphore to limit concurrency
-        semaphore = asyncio.Semaphore(max_concurrent)
+        semaphore = asyncio.Semaphore(config.max_concurrent_crawls)
         
         async def process_url(url: str):
             async with semaphore:
@@ -210,7 +214,7 @@ async def crawl_parallel(urls: List[str], max_concurrent: int = 5):
                 )
                 if result.success:
                     print(f"Successfully crawled: {url}")
-                    await process_and_store_document(url, result.markdown_v2.raw_markdown)
+                    await process_and_store_document(url, result.markdown_v2.raw_markdown, config.source_name)
                 else:
                     print(f"Failed: {url} - Error: {result.error_message}")
         
@@ -219,15 +223,15 @@ async def crawl_parallel(urls: List[str], max_concurrent: int = 5):
     finally:
         await crawler.close()
 
-def get_pydantic_ai_docs_urls(testing: bool = False) -> List[str]:
-    """Get URLs from Pydantic AI docs sitemap.
+def get_docs_urls(config: CrawlerConfig, testing: bool = False) -> List[str]:
+    """Get URLs from docs sitemap.
     
     Args:
-        testing (bool): If True, returns only first 5 URLs for testing purposes
+        testing (bool): If True, returns only first n URLs for testing purposes
     """
-    sitemap_url = "https://ai.pydantic.dev/sitemap.xml"
+    
     try:
-        response = requests.get(sitemap_url)
+        response = requests.get(config.sitemap_url)
         response.raise_for_status()
         
         # Parse the XML
@@ -237,10 +241,10 @@ def get_pydantic_ai_docs_urls(testing: bool = False) -> List[str]:
         namespace = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
         urls = [loc.text for loc in root.findall('.//ns:loc', namespace)]
         
-        # If in testing mode, return only first 5 URLs
+        # If in testing mode, return only first n URLs
         if testing:
-            print("Running in testing mode - using only first 5 URLs")
-            return urls[:5]
+            print(f"Running in testing mode - using only first {config.test_mode_url_limit} URLs")
+            return urls[:config.test_mode_url_limit]
             
         return urls
     except Exception as e:
@@ -251,14 +255,14 @@ async def main():
     # Get command line arguments
     testing_mode = "--test" in sys.argv
     
-    # Get URLs from Pydantic AI docs
-    urls = get_pydantic_ai_docs_urls(testing=testing_mode)
+    # Get URLs from docs
+    urls = get_docs_urls(CrawlerConfig, testing=testing_mode)
     if not urls:
         print("No URLs found to crawl")
         return
     
     print(f"Found {len(urls)} URLs to crawl")
-    await crawl_parallel(urls)
+    await crawl_parallel(urls, CrawlerConfig)
 
 if __name__ == "__main__":
     asyncio.run(main())
