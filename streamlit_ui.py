@@ -24,22 +24,28 @@ from pydantic_ai.messages import (
     ModelMessagesTypeAdapter
 )
 from domain_ai_expert import pydantic_ai_expert, PydanticAIDeps
+from shared_resources import embedding_model
 
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
-# Initialize OpenAI clients for both embeddings and DeepSeek
-openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # For embeddings only
-embedding_model = SentenceTransformer('dunzhang/stella_en_400M_v5', trust_remote_code=True)
+MODEL_CACHE_DIR = os.path.join(os.path.dirname(__file__), "models")
+os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
+
+# Validate environment variables
+if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_SERVICE_KEY"):
+    raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in .env file")
+
+supabase: Client = Client(
+    os.getenv("SUPABASE_URL", ""),
+    os.getenv("SUPABASE_SERVICE_KEY", "")
+)
+
+# Initialize deepseek clients for llm
 deepseek_client = AsyncOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     base_url="https://api.deepseek.com"
-)
-
-supabase: Client = Client(
-    os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_SERVICE_KEY")
 )
 
 # Configure logfire to suppress warnings (optional)

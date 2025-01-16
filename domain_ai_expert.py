@@ -13,19 +13,21 @@ from pydantic_ai.models.openai import OpenAIModel
 from openai import AsyncOpenAI
 from supabase import Client
 from typing import List
+from shared_resources import embedding_model
 
 load_dotenv()
 
+# Initialize OpenAI Model with explicit API key
 model = OpenAIModel(
     'deepseek-chat',
     base_url='https://api.deepseek.com',
     api_key=os.getenv('DEEPSEEK_API_KEY')
 )
 
-logfire.configure(send_to_logfire='if-token-present')
+if not os.getenv('DEEPSEEK_API_KEY'):
+    raise ValueError("DEEPSEEK_API_KEY environment variable is not set")
 
-# Initialize embedding model
-embedding_model = SentenceTransformer('dunzhang/stella_en_400M_v5', trust_remote_code=True)
+logfire.configure(send_to_logfire='if-token-present')
 
 @dataclass
 class PydanticAIDeps:
@@ -68,7 +70,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_
     Retrieve relevant documentation chunks based on the query with RAG.
     
     Args:
-        ctx: The context including the Supabase client and OpenAI client
+        ctx: The context including the Supabase client and deepseek client
         user_query: The user's question or query
         
     Returns:
