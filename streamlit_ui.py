@@ -81,8 +81,7 @@ def display_message_part(part):
 
 async def run_agent_with_streaming(user_input: str):
     """
-    Run the agent with streaming text for the user_input prompt,
-    while maintaining the entire conversation in `st.session_state.messages`.
+    Run the agent and display the response (non-streaming version for DeepSeek compatibility)
     """
     # Prepare dependencies
     deps = PydanticAIDeps(
@@ -90,32 +89,31 @@ async def run_agent_with_streaming(user_input: str):
         deepseek_client=deepseek_client
     )
 
-    # Run the agent in a stream
-    async with pydantic_ai_expert.run_stream(
+    # Run the agent without streaming
+    result = await pydantic_ai_expert.run(
         user_input,
         deps=deps,
-        message_history= st.session_state.messages[:-1],  # pass entire conversation so far
-    ) as result:
-        # We'll gather partial text to show incrementally
-        partial_text = ""
-        message_placeholder = st.empty()
+        message_history=st.session_state.messages[:-1]
+    )
+    
+    # Extract all new messages using the correct method
+    new_messages = list(result.new_messages())
+    
+    # Find the last response message and extract its text
+    response_text = ""
+    for msg in reversed(new_messages):
+        if isinstance(msg, ModelResponse):
+            for part in msg.parts:
+                if isinstance(part, TextPart):
+                    response_text = part.content
+                    break
+            break
 
-        # Render partial text as it arrives
-        async for chunk in result.stream_text(delta=True):
-            partial_text += chunk
-            message_placeholder.markdown(partial_text)
+    # Display the response
+    st.markdown(response_text)
 
-        # Now that the stream is finished, we have a final result.
-        # Add new messages from this run, excluding user-prompt messages
-        filtered_messages = [msg for msg in result.new_messages() 
-                            if not (hasattr(msg, 'parts') and 
-                                    any(part.part_kind == 'user-prompt' for part in msg.parts))]
-        st.session_state.messages.extend(filtered_messages)
-
-        # Add the final response to the messages
-        st.session_state.messages.append(
-            ModelResponse(parts=[TextPart(content=partial_text)])
-        )
+    # Add new messages to session state
+    st.session_state.messages.extend(new_messages)
 
 
 async def main():
