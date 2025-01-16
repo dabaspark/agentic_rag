@@ -91,7 +91,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_
             'match_site_pages',
             {
                 'query_embedding': query_embedding,
-                'match_count': 5,
+                'match_count': 3,
                 'filter': {'source': 'pydantic_ai_docs'}
             }
         ).execute()

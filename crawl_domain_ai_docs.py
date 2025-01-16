@@ -93,7 +93,7 @@ async def get_title_and_summary(chunk: str, url: str) -> Dict[str, str]:
     system_prompt = """You are an AI that extracts titles and summaries from documentation chunks.
     Return a JSON object with 'title' and 'summary' keys.
     For the title: If this seems like the start of a document, extract its title. If it's a middle chunk, derive a descriptive title.
-    For the summary: Create a concise summary of the main points in this chunk.
+    For the summary: Extremely Short bullet points of the contents description of the chunks  (6 words maximum per different contents)
     Keep both title and summary concise but informative."""
     
     try:
