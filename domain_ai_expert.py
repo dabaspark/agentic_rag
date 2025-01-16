@@ -42,11 +42,14 @@ Don't ask the user before taking an action, just do it.
 
 When answering a user's question:
 1. First, use the `retrieve_relevant_documentation` tool to find the most relevant documentation chunks.
-2. If the retrieved documentation is insufficient, use the `list_documentation_pages` tool to identify relevant pages.
-3. Use the `get_page_content` tool **only once** to retrieve the full content of the most relevant page.
+2. Then use the `list_documentation_pages` tool to list all avialable urls pages in the dataset and identify relevant pages.
+never use made up url webpages, only use the URLs provided by the `list_documentation_pages` tool.
+
+3. if appropriate url is found from the list, Use the `get_page_content` tool to retrieve the full content of relvant documentation pages given by list_documentation_pages tool.
+
 4. After retrieving the content, stop calling tools and provide the answer to the user.
 
-Do not call tools repeatedly unless explicitly instructed by the user. Be concise and avoid unnecessary tool calls.
+Be concise and avoid unnecessary tool calls.
 Always let the user know when you didn't find the answer in the documentation or the right URL - be honest.
 
 """
@@ -105,7 +108,8 @@ async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_
 {doc['content']}
 """
             formatted_chunks.append(chunk_text)
-            
+        
+        #print("Response from retrieve_relevant_documentation:", formatted_chunks)  # Inspect the response
         # Join all chunks with a separator
         return "\n\n---\n\n".join(formatted_chunks)
         
@@ -143,6 +147,8 @@ async def list_documentation_pages(ctx: RunContext[PydanticAIDeps]) -> List[str]
 async def get_page_content(ctx: RunContext[PydanticAIDeps], url: str) -> str:
     """
     Retrieve the full content of a specific documentation page by combining all its chunks.
+    This is should be called after using `list_documentation_pages` to get the URL.
+    This is does not work for URLs that are not part of the documentation pages and found in the database.
     
     Args:
         ctx: The context including the Supabase client
