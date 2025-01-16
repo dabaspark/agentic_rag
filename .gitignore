@@ -1,0 +1,7 @@
+models/
+Crawl4AI-examples/
+studio-integration-api/
+venv/
+__pycache__/
+.env
+docs/
