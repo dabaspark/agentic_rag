@@ -229,13 +229,21 @@ def get_docs_urls(config: CrawlerConfig, testing: bool = False) -> List[str]:
     Args:
         testing (bool): If True, returns only first n URLs for testing purposes
     """
-    
     try:
-        response = requests.get(config.sitemap_url)
-        response.raise_for_status()
+        # Handle both local and remote sitemaps
+        if config.sitemap_url.startswith(('http://', 'https://')):
+            # Remote sitemap
+            response = requests.get(config.sitemap_url)
+            response.raise_for_status()
+            sitemap_content = response.content
+        else:
+            # Local sitemap - remove file:// prefix if present
+            local_path = config.sitemap_url.replace('file://', '')
+            with open(local_path, 'rb') as f:
+                sitemap_content = f.read()
         
         # Parse the XML
-        root = ElementTree.fromstring(response.content)
+        root = ElementTree.fromstring(sitemap_content)
         
         # Extract all URLs from the sitemap
         namespace = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}

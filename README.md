@@ -35,6 +35,14 @@ class CrawlerConfig:
     # ...other settings if you want to tweak things see `config.py`
 ```
 
+## Working with Sitemaps
+
+You have several options to get a sitemap:
+
+1. Direct URL: Most sites have a sitemap at `https://example.com/sitemap.xml`
+
+2. Generate locally using Python script or use https://www.xml-sitemaps.com/ to generate it for you.
+
 ## Quick Start
 
 1. Set up the database (just copy-paste the SQL from `site_pages.sql` into Supabase)
