@@ -1,13 +1,13 @@
-# Agentic RAG: My Super Cheap Documentation Helper
+# Agentic RAG
 
-Hey! I built this because I was tired of:
-1. LLMs being clueless about newer APIs
+I built this because I was tired of:
+1. LLMs being clueless about newer APIs when programming
 2. Basic RAG setups choking on technical stuff
 
-## Why This is Cool
+## Why This solution
 
 - **Works with Any Docs**: Point it at any documentation site and go
-- **Completely Free Embeddings**: Using stella_en_400M_v5 - it's a beast at retrieval and totally free
+- **Completely Free Embeddings**: Using stella_en_400M_v5 - it's a beast at retrieval and totally working locally
 - **Dirt Cheap LLM**: DeepSeek's API costs next to nothing
 - **Free Database**: Supabase's free tier has everything we need
 
@@ -20,7 +20,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-2. Your keys in `.env`:
+2. Your keys in `.env.example`: (change the name from .env.example to .env as well)
 ```env
 DEEPSEEK_API_KEY=your_deepseek_api_key
 SUPABASE_URL=your_supabase_url
@@ -32,7 +32,7 @@ SUPABASE_SERVICE_KEY=your_supabase_service_key
 class CrawlerConfig:
     source_name: str = "your_docs_name"
     sitemap_url: str = "your_sitemap_url"
-    # ...other settings if you want to tweak things
+    # ...other settings if you want to tweak things see `config.py`
 ```
 
 ## Quick Start
@@ -63,17 +63,6 @@ Just a few key files:
 - `streamlit_ui.py`: Simple chat interface
 - `config.py`: Your settings live here
 - `shared_resources.py`: Handles the embedding model
-
-## The Technical Details
-
-## Project Structure
-
-- `docs_crawler.py`: Configurable documentation crawler and processor
-- `domain_ai_expert.py`: RAG agent implementation
-- `streamlit_ui.py`: Web interface
-- `config.py`: Centralized configuration
-- `shared_resources.py`: Shared components like embedding model
-- `requirements.txt`: Project dependencies
 
 
 Feel free to use this for your own documentation needs or contribute improvements!
